@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import Bot from 'bot-api-js-client'
 import moment from 'moment'
 import store from '@/store/store'
-
+import fs from 'fs'
 export function generateConversationId(userId, recipientId) {
   userId = userId.toString()
   recipientId = recipientId.toString()
@@ -119,4 +119,48 @@ export function sendNotification(title, body, conversationId) {
   newNotification.onclick = () => {
     store.dispatch('setCurrentConversation', conversationId)
   }
+}
+
+export function getOrientation(file) {
+  let result = fs.readFileSync(file).slice(0, 64 * 1024)
+  var view = new DataView(toArrayBuffer(result))
+
+  if (view.getUint16(0, false) !== 0xffd8) {
+    return -2
+  }
+
+  var length = view.byteLength
+  var offset = 2
+
+  while (offset < length) {
+    var marker = view.getUint16(offset, false)
+    offset += 2
+
+    if (marker === 0xffe1) {
+      if (view.getUint32((offset += 2), false) !== 0x45786966) {
+        return -1
+      }
+      var little = view.getUint16((offset += 6), false) === 0x4949
+      offset += view.getUint32(offset + 4, little)
+      var tags = view.getUint16(offset, little)
+      offset += 2
+
+      for (var i = 0; i < tags; i++) {
+        if (view.getUint16(offset + i * 12, little) === 0x0112) {
+          return view.getUint16(offset + i * 12 + 8, little)
+        }
+      }
+    } else if ((marker & 0xff00) !== 0xff00) break
+    else offset += view.getUint16(offset, false)
+  }
+  return -1
+}
+
+function toArrayBuffer(buf) {
+  var ab = new ArrayBuffer(buf.length)
+  var view = new Uint8Array(ab)
+  for (var i = 0; i < buf.length; ++i) {
+    view[i] = buf[i]
+  }
+  return ab
 }

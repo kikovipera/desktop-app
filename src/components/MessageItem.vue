@@ -116,6 +116,7 @@ import AudioItem from './AudioItem'
 import VideoItem from './VideoItem'
 import messageDao from '@/dao/message_dao.js'
 import { mapGetters } from 'vuex'
+import { getOrientation } from '@/utils/util.js'
 export default {
   name: 'MessageItem',
   props: ['conversation', 'message', 'me', 'prev', 'unread'],
@@ -248,13 +249,21 @@ export default {
       return message.mediaUrl
     },
     borderSetObject: message => {
+      let style = {}
       if (1.5 * message.mediaWidth > message.mediaHeight) {
-        return { width: message.mediaWidth + 'px' }
+        style.width = message.mediaWidth + 'px'
+      } else if (3 * message.mediaWidth < message.mediaHeight) {
+        style.width = message.mediaWidth + 'px'
+      } else {
+        style.height = message.mediaHeight + 'px'
       }
-      if (3 * message.mediaWidth < message.mediaHeight) {
-        return { width: message.mediaWidth + 'px' }
+
+      let o = getOrientation(message.mediaUrl.substring(7))
+      if (o === 6) {
+        style.transform = `rotate(90deg) scaleX(${message.mediaHeight /
+          message.mediaWidth}) scaleY(${message.mediaWidth / message.mediaHeight})`
       }
-      return { height: message.mediaHeight + 'px' }
+      return style
     },
     getInfo(message, me) {
       const id = me.user_id
